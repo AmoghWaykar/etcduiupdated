@@ -182,33 +182,7 @@
                       {{ v.label }}
                     </button>
                   }
-                  <button
-                    class="version-badge version-badge-custom"
-                    [class.version-badge-selected]="selectedVersionLabel() === 'Custom Revision'"
-                    type="button"
-                    (click)="selectedVersionLabel.set('Custom Revision')"
-                    matTooltip="Enter a custom revision number"
-                  >
-                    <mat-icon class="vbadge-icon">edit</mat-icon>
-                    Custom
-                  </button>
                 </div>
-
-                @if (selectedVersionLabel() === 'Custom Revision') {
-                  <div class="custom-revision-row">
-                    <mat-form-field appearance="outline" class="custom-rev-field" subscriptSizing="dynamic">
-                      <mat-label>Custom Revision</mat-label>
-                      <mat-icon matPrefix>tag</mat-icon>
-                      <input matInput [ngModel]="customRevision()" (ngModelChange)="customRevision.set($event)"
-                        placeholder="Enter revision number" autocomplete="off" type="number" />
-                    </mat-form-field>
-                    <button mat-flat-button class="fetch-btn" type="button"
-                      (click)="fetchAtRevision()" [disabled]="loading()">
-                      <mat-icon>download</mat-icon>
-                      Fetch
-                    </button>
-                  </div>
-                }
               </div>
             }
           </div>

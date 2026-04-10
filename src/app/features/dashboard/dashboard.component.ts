@@ -90,7 +90,7 @@ export class DashboardComponent implements OnInit {
   selectedEntry = signal<AppKeyEntry | null>(null);
 
   /**
-   * Tracks the *label* of the selected version badge, e.g. "v1", "v3", or "Custom Revision".
+   * Tracks the *label* of the selected version badge, e.g. "v1", "v3".
    * This keeps the badge highlight correct regardless of the raw revision numbers.
    */
   selectedVersionLabel = signal<string>('');
@@ -104,7 +104,6 @@ export class DashboardComponent implements OnInit {
   /** The raw etcd revision number for the currently selected version badge (used for API) */
   private selectedVersionRevision = signal<string>('');
 
-  customRevision = signal<string>('');
   editorValue = '';
   private baselineValue = '';
 
@@ -192,10 +191,7 @@ export class DashboardComponent implements OnInit {
     const app = this.appName();
     const rel = this.selectedPath();
 
-    // Use custom revision if selected, otherwise use the stored raw revision
-    const rev = this.selectedVersionLabel() === 'Custom Revision'
-      ? this.customRevision().trim()
-      : this.selectedVersionRevision().trim();
+    const rev = this.selectedVersionRevision().trim();
 
     if (!app || !rel || !rev) return;
     this.loading.set(true);
@@ -212,8 +208,9 @@ export class DashboardComponent implements OnInit {
             // Load historical value into editor; baselineValue stays as current so isDirty() works
             this.editorValue = isSecure ? '' : decoded.value;
             // Show Restore button whenever we're on a historical version
-            this.isViewingHistory.set(this.selectedVersionLabel() !== 'Custom Revision' &&
-              !this.getVersionBadges(this.selectedEntry()!).find(b => b.label === this.selectedVersionLabel())?.isCurrent);
+            this.isViewingHistory.set(
+              !this.getVersionBadges(this.selectedEntry()!).find(b => b.label === this.selectedVersionLabel())?.isCurrent
+            );
             this.snack.open(
               isSecure
                 ? `Historical revision ${rev} loaded — secure value not shown`
@@ -284,7 +281,6 @@ export class DashboardComponent implements OnInit {
     const currentVer = parseInt(entry.version || '1', 10);
     this.selectedVersionLabel.set(`v${currentVer}`);
     this.selectedVersionRevision.set(entry.modRevision);
-    this.customRevision.set('');
     // For secure keys: don't pre-fill editor (value is hidden); user must type a new value
     this.editorValue = entry.isSecure ? '' : entry.value;
     this.baselineValue = entry.isSecure ? '' : entry.value;
@@ -295,7 +291,6 @@ export class DashboardComponent implements OnInit {
     this.selectedEntry.set(null);
     this.selectedVersionLabel.set('');
     this.selectedVersionRevision.set('');
-    this.customRevision.set('');
     this.isViewingHistory.set(false);
     this.editorValue = '';
     this.baselineValue = '';
