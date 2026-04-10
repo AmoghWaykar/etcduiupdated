@@ -36,7 +36,7 @@
         </a>
       }
       <button mat-stroked-button class="btn-copy-keys" type="button" (click)="openCopyPanel()"
-        matTooltip="Copy all keys from one app namespace into another">
+        matTooltip="Copy selected keys from one app namespace into another">
         <mat-icon>content_copy</mat-icon>
         Copy Keys To…
       </button>
@@ -60,14 +60,15 @@
     }
   </mat-card>
 
-  <!-- ── COPY KEYS PANEL ──────────────────────────────────────── -->
+  <!-- ── COPY KEYS PANEL ──────────────────────────────────────────── -->
   @if (copyPanelOpen()) {
     <mat-card class="card copy-card" appearance="outlined">
+
       <div class="card-header">
         <mat-icon class="card-icon">content_copy</mat-icon>
         <div>
           <h2 class="card-title">Copy Keys To Another App</h2>
-          <p class="card-desc">Load keys from a source namespace, then write them all into a destination namespace. Secure keys are never copied.</p>
+          <p class="card-desc">Choose which keys to copy from a source namespace into a destination. Secure keys are never copied.</p>
         </div>
         <button class="close-btn" type="button" (click)="closeCopyPanel()" matTooltip="Close">
           <mat-icon>close</mat-icon>
@@ -78,7 +79,7 @@
         <mat-progress-bar mode="indeterminate" class="copy-progress" />
       }
 
-      <!-- Step 1: Source -->
+      <!-- Step 1: Source ── -->
       <div class="copy-step">
         <span class="step-label">
           <span class="step-num">1</span>
@@ -98,34 +99,57 @@
           </button>
         </div>
 
+        <!-- Key selection list ── -->
         @if (sourceLoaded()) {
-          <div class="source-summary">
-            <mat-icon class="summary-icon">check_circle</mat-icon>
-            <span>
-              <strong>{{ copySourceKeys().length }}</strong> key(s) found —
-              <strong>{{ copyKeyCount() }}</strong> non-secure will be copied
-              @if (copySourceKeys().length !== copyKeyCount()) {
-                <span class="secure-note">({{ copySourceKeys().length - copyKeyCount() }} secure skipped)</span>
-              }
-            </span>
+          <div class="selection-header">
+            <!-- Select-all checkbox row -->
+            <label class="select-all-row" [class.indeterminate]="someSelected()">
+              <span class="custom-checkbox"
+                [class.checked]="allSelected()"
+                [class.indeterminate]="someSelected()"
+                (click)="toggleAll()">
+                <mat-icon>{{ allSelected() ? 'check_box' : someSelected() ? 'indeterminate_check_box' : 'check_box_outline_blank' }}</mat-icon>
+              </span>
+              <span class="select-all-label">
+                {{ allSelected() ? 'Deselect all' : 'Select all' }}
+              </span>
+              <span class="selection-count-badge">
+                {{ selectedCount() }} / {{ selectableKeys().length }} selected
+              </span>
+            </label>
           </div>
-          <!-- Key preview list -->
-          <div class="key-preview">
+
+          <!-- Scrollable key list with individual checkboxes -->
+          <div class="key-list">
             @for (k of copySourceKeys(); track k.relativePath) {
-              <div class="key-preview-row" [class.is-secure]="k.isSecure">
-                <mat-icon class="key-icon">{{ k.isSecure ? 'lock' : 'description' }}</mat-icon>
-                <span class="key-path">{{ k.relativePath }}</span>
-                @if (k.isSecure) {
-                  <span class="skip-badge">skip</span>
+              <label class="key-row"
+                [class.is-secure]="k.isSecure"
+                [class.is-checked]="!k.isSecure && isKeySelected(k.relativePath)">
+
+                @if (!k.isSecure) {
+                  <span class="key-checkbox" (click)="toggleKey(k.relativePath)">
+                    <mat-icon>{{ isKeySelected(k.relativePath) ? 'check_box' : 'check_box_outline_blank' }}</mat-icon>
+                  </span>
+                } @else {
+                  <span class="key-checkbox key-checkbox-disabled">
+                    <mat-icon>lock</mat-icon>
+                  </span>
                 }
-              </div>
+
+                <mat-icon class="key-type-icon">{{ k.isSecure ? 'lock' : 'description' }}</mat-icon>
+                <span class="key-path">{{ k.relativePath }}</span>
+
+                @if (k.isSecure) {
+                  <span class="tag tag-secure">secure — skipped</span>
+                }
+              </label>
             }
           </div>
         }
       </div>
 
-      <!-- Step 2: Destination -->
-      @if (sourceLoaded() && copyKeyCount() > 0) {
+      <!-- Step 2: Destination ── -->
+      @if (sourceLoaded() && selectableKeys().length > 0) {
         <div class="copy-step">
           <span class="step-label">
             <span class="step-num">2</span>
@@ -137,11 +161,10 @@
               <mat-icon matPrefix>label</mat-icon>
               <input matInput [ngModel]="copyDestApp()" (ngModelChange)="copyDestApp.set($event)"
                 placeholder="e.g. second-trial" autocomplete="off" (keyup.enter)="executeCopy()" />
-              <mat-hint>Keys will be written as dest-app/key-name</mat-hint>
+              <mat-hint>Keys written as dest-app/key-name</mat-hint>
             </mat-form-field>
           </div>
 
-          <!-- Recent apps as quick-pick destination chips -->
           @if (appState.recentApps().length) {
             <div class="dest-recents">
               <span class="dest-recents-label">Pick recent:</span>
@@ -157,9 +180,10 @@
 
           <div class="copy-actions">
             <button mat-flat-button class="btn-primary" type="button"
-              (click)="executeCopy()" [disabled]="copying() || loadingSource() || !copyDestApp().trim()">
+              (click)="executeCopy()"
+              [disabled]="copying() || loadingSource() || !copyDestApp().trim() || selectedCount() === 0">
               <mat-icon>content_copy</mat-icon>
-              Copy {{ copyKeyCount() }} Key(s) →
+              Copy {{ selectedCount() }} Key(s) →
             </button>
             <button mat-stroked-button class="btn-secondary" type="button" (click)="closeCopyPanel()">
               Cancel
@@ -167,6 +191,7 @@
           </div>
         </div>
       }
+
     </mat-card>
   }
 

@@ -51,12 +51,30 @@ export class AppSelectComponent {
   copySourceApp = signal('');
   copyDestApp = signal('');
   copySourceKeys = signal<AppKeyEntry[]>([]);
+
+  /** Set of relativePaths the user has checked for copying */
+  selectedKeys = signal<Set<string>>(new Set());
+
   loadingSource = signal(false);
   copying = signal(false);
 
-  /** Non-secure key count in the loaded source */
-  readonly copyKeyCount = computed(() =>
-    this.copySourceKeys().filter(k => !k.isSecure).length
+  /** All non-secure keys available to select */
+  readonly selectableKeys = computed(() =>
+    this.copySourceKeys().filter(k => !k.isSecure)
+  );
+
+  /** Count of currently selected keys */
+  readonly selectedCount = computed(() => this.selectedKeys().size);
+
+  /** True if every selectable key is checked */
+  readonly allSelected = computed(() =>
+    this.selectableKeys().length > 0 &&
+    this.selectableKeys().every(k => this.selectedKeys().has(k.relativePath))
+  );
+
+  /** True if some (but not all) selectable keys are checked */
+  readonly someSelected = computed(() =>
+    this.selectedCount() > 0 && !this.allSelected()
   );
 
   /** True once source keys have been fetched */
@@ -66,6 +84,7 @@ export class AppSelectComponent {
     this.copySourceApp.set(this.draft.trim() || this.appState.appName());
     this.copyDestApp.set('');
     this.copySourceKeys.set([]);
+    this.selectedKeys.set(new Set());
     this.copyPanelOpen.set(true);
   }
 
@@ -81,6 +100,7 @@ export class AppSelectComponent {
     }
     this.loadingSource.set(true);
     this.copySourceKeys.set([]);
+    this.selectedKeys.set(new Set());
     this.etcd
       .rangeByAppPrefix(src)
       .pipe(finalize(() => this.loadingSource.set(false)))
@@ -103,11 +123,15 @@ export class AppSelectComponent {
             });
           }
           this.copySourceKeys.set(flat);
+          // Auto-select all non-secure keys by default
+          const autoSelected = new Set(flat.filter(k => !k.isSecure).map(k => k.relativePath));
+          this.selectedKeys.set(autoSelected);
+
           if (!flat.length) {
             this.snack.open(`No keys found under "${src}".`, 'Dismiss', { duration: 4000 });
           } else {
             this.snack.open(
-              `Found ${flat.length} key(s) under "${src}" (${this.copyKeyCount()} non-secure).`,
+              `Found ${flat.length} key(s) — ${autoSelected.size} selected for copy.`,
               'OK',
               { duration: 3000 }
             );
@@ -115,6 +139,31 @@ export class AppSelectComponent {
         },
         error: (e: Error) => this.snack.open(e.message, 'Dismiss', { duration: 8000 }),
       });
+  }
+
+  isKeySelected(relativePath: string): boolean {
+    return this.selectedKeys().has(relativePath);
+  }
+
+  toggleKey(relativePath: string): void {
+    const current = new Set(this.selectedKeys());
+    if (current.has(relativePath)) {
+      current.delete(relativePath);
+    } else {
+      current.add(relativePath);
+    }
+    this.selectedKeys.set(current);
+  }
+
+  toggleAll(): void {
+    if (this.allSelected()) {
+      // Deselect all
+      this.selectedKeys.set(new Set());
+    } else {
+      // Select all non-secure
+      const all = new Set(this.selectableKeys().map(k => k.relativePath));
+      this.selectedKeys.set(all);
+    }
   }
 
   executeCopy(): void {
@@ -129,9 +178,13 @@ export class AppSelectComponent {
       this.snack.open('Source and destination must be different.', 'Dismiss', { duration: 4000 });
       return;
     }
-    const keys = this.copySourceKeys().filter(k => !k.isSecure);
+
+    // Only copy the user-selected keys
+    const keys = this.copySourceKeys().filter(
+      k => !k.isSecure && this.selectedKeys().has(k.relativePath)
+    );
     if (!keys.length) {
-      this.snack.open('No non-secure keys to copy.', 'Dismiss', { duration: 4000 });
+      this.snack.open('No keys selected for copying.', 'Dismiss', { duration: 4000 });
       return;
     }
 
