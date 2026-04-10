@@ -209,3 +209,231 @@
   font-size: 0.8rem;
   text-align: center;
 }
+
+// ── Copy Keys button ─────────────────────────────────────────────────
+.btn-copy-keys {
+  border-color: var(--app-border) !important;
+  color: var(--app-fg) !important;
+  border-radius: 8px !important;
+
+  mat-icon {
+    font-size: 1rem;
+    width: 1rem;
+    height: 1rem;
+    margin-right: 0.3rem;
+  }
+
+  &:hover {
+    border-color: color-mix(in srgb, var(--app-accent) 50%, var(--app-border)) !important;
+    background: color-mix(in srgb, var(--app-accent) 8%, transparent) !important;
+  }
+}
+
+// ── Copy Keys panel ──────────────────────────────────────────────────
+.copy-card {
+  margin-top: 1.25rem;
+  width: min(520px, 100%);
+  position: relative;
+}
+
+.copy-progress {
+  margin: -0.25rem -1.75rem 1rem;
+  border-radius: 0;
+}
+
+.close-btn {
+  margin-left: auto;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--app-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.25rem;
+  border-radius: 6px;
+  transition: background 0.15s, color 0.15s;
+
+  &:hover {
+    background: color-mix(in srgb, var(--app-border) 60%, transparent);
+    color: var(--app-fg);
+  }
+
+  mat-icon {
+    font-size: 1.1rem;
+    width: 1.1rem;
+    height: 1.1rem;
+  }
+}
+
+.copy-step {
+  margin-bottom: 1.25rem;
+  padding-bottom: 1.25rem;
+  border-bottom: 1px solid var(--app-border);
+
+  &:last-child {
+    border-bottom: none;
+    margin-bottom: 0;
+    padding-bottom: 0;
+  }
+}
+
+.step-label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  font-weight: 600;
+  color: var(--app-muted);
+  margin-bottom: 0.75rem;
+}
+
+.step-num {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--app-accent) 20%, var(--app-surface));
+  color: var(--app-accent-hover);
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+
+.step-row {
+  display: flex;
+  gap: 0.625rem;
+  align-items: flex-start;
+}
+
+.copy-field {
+  flex: 1;
+}
+
+.btn-load {
+  border-color: var(--app-border) !important;
+  color: var(--app-fg) !important;
+  border-radius: 8px !important;
+  height: 56px;
+  white-space: nowrap;
+
+  mat-icon {
+    font-size: 1rem;
+    width: 1rem;
+    height: 1rem;
+    margin-right: 0.3rem;
+  }
+}
+
+.source-summary {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: color-mix(in srgb, var(--app-accent) 8%, var(--app-surface));
+  border: 1px solid color-mix(in srgb, var(--app-accent) 25%, transparent);
+  border-radius: 8px;
+  padding: 0.6rem 0.875rem;
+  font-size: 0.875rem;
+  color: var(--app-fg);
+  margin-bottom: 0.75rem;
+
+  .summary-icon {
+    font-size: 1rem;
+    width: 1rem;
+    height: 1rem;
+    color: #4caf50;
+  }
+
+  .secure-note {
+    color: var(--app-muted);
+    margin-left: 0.25rem;
+  }
+}
+
+.key-preview {
+  max-height: 160px;
+  overflow-y: auto;
+  border: 1px solid var(--app-border);
+  border-radius: 8px;
+  background: var(--app-surface-elevated, var(--app-surface));
+  margin-bottom: 0.5rem;
+}
+
+.key-preview-row {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.3rem 0.625rem;
+  border-bottom: 1px solid color-mix(in srgb, var(--app-border) 50%, transparent);
+  font-size: 0.8rem;
+
+  &:last-child { border-bottom: none; }
+
+  &.is-secure {
+    opacity: 0.5;
+  }
+
+  .key-icon {
+    font-size: 0.875rem;
+    width: 0.875rem;
+    height: 0.875rem;
+    color: var(--app-muted);
+    flex-shrink: 0;
+  }
+
+  .key-path {
+    flex: 1;
+    font-family: monospace;
+    color: var(--app-fg);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .skip-badge {
+    font-size: 0.65rem;
+    padding: 0.1em 0.4em;
+    border-radius: 4px;
+    background: color-mix(in srgb, var(--app-muted) 20%, transparent);
+    color: var(--app-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+}
+
+.dest-recents {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+  margin-bottom: 0.875rem;
+  font-size: 0.8rem;
+  color: var(--app-muted);
+}
+
+.dest-recents-label {
+  font-size: 0.75rem;
+  color: var(--app-muted);
+}
+
+.chip-sm {
+  font-size: 0.75rem;
+  padding: 0.2rem 0.5rem;
+
+  .chip-icon {
+    font-size: 0.75rem;
+    width: 0.75rem;
+    height: 0.75rem;
+  }
+}
+
+.copy-actions {
+  display: flex;
+  gap: 0.625rem;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-top: 0.75rem;
+}

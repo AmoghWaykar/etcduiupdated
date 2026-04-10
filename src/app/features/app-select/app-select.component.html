@@ -35,6 +35,11 @@
           Continue to Explorer
         </a>
       }
+      <button mat-stroked-button class="btn-copy-keys" type="button" (click)="openCopyPanel()"
+        matTooltip="Copy all keys from one app namespace into another">
+        <mat-icon>content_copy</mat-icon>
+        Copy Keys To…
+      </button>
     </div>
 
     @if (appState.recentApps().length) {
@@ -54,6 +59,116 @@
       </div>
     }
   </mat-card>
+
+  <!-- ── COPY KEYS PANEL ──────────────────────────────────────── -->
+  @if (copyPanelOpen()) {
+    <mat-card class="card copy-card" appearance="outlined">
+      <div class="card-header">
+        <mat-icon class="card-icon">content_copy</mat-icon>
+        <div>
+          <h2 class="card-title">Copy Keys To Another App</h2>
+          <p class="card-desc">Load keys from a source namespace, then write them all into a destination namespace. Secure keys are never copied.</p>
+        </div>
+        <button class="close-btn" type="button" (click)="closeCopyPanel()" matTooltip="Close">
+          <mat-icon>close</mat-icon>
+        </button>
+      </div>
+
+      @if (loadingSource() || copying()) {
+        <mat-progress-bar mode="indeterminate" class="copy-progress" />
+      }
+
+      <!-- Step 1: Source -->
+      <div class="copy-step">
+        <span class="step-label">
+          <span class="step-num">1</span>
+          Source application
+        </span>
+        <div class="step-row">
+          <mat-form-field appearance="outline" class="field copy-field">
+            <mat-label>Source namespace</mat-label>
+            <mat-icon matPrefix>label</mat-icon>
+            <input matInput [ngModel]="copySourceApp()" (ngModelChange)="copySourceApp.set($event)"
+              placeholder="e.g. first-trial" autocomplete="off" (keyup.enter)="loadSourceKeys()" />
+          </mat-form-field>
+          <button mat-stroked-button class="btn-load" type="button"
+            (click)="loadSourceKeys()" [disabled]="loadingSource() || copying()">
+            <mat-icon>search</mat-icon>
+            Load Keys
+          </button>
+        </div>
+
+        @if (sourceLoaded()) {
+          <div class="source-summary">
+            <mat-icon class="summary-icon">check_circle</mat-icon>
+            <span>
+              <strong>{{ copySourceKeys().length }}</strong> key(s) found —
+              <strong>{{ copyKeyCount() }}</strong> non-secure will be copied
+              @if (copySourceKeys().length !== copyKeyCount()) {
+                <span class="secure-note">({{ copySourceKeys().length - copyKeyCount() }} secure skipped)</span>
+              }
+            </span>
+          </div>
+          <!-- Key preview list -->
+          <div class="key-preview">
+            @for (k of copySourceKeys(); track k.relativePath) {
+              <div class="key-preview-row" [class.is-secure]="k.isSecure">
+                <mat-icon class="key-icon">{{ k.isSecure ? 'lock' : 'description' }}</mat-icon>
+                <span class="key-path">{{ k.relativePath }}</span>
+                @if (k.isSecure) {
+                  <span class="skip-badge">skip</span>
+                }
+              </div>
+            }
+          </div>
+        }
+      </div>
+
+      <!-- Step 2: Destination -->
+      @if (sourceLoaded() && copyKeyCount() > 0) {
+        <div class="copy-step">
+          <span class="step-label">
+            <span class="step-num">2</span>
+            Destination application
+          </span>
+          <div class="step-row">
+            <mat-form-field appearance="outline" class="field copy-field">
+              <mat-label>Destination namespace</mat-label>
+              <mat-icon matPrefix>label</mat-icon>
+              <input matInput [ngModel]="copyDestApp()" (ngModelChange)="copyDestApp.set($event)"
+                placeholder="e.g. second-trial" autocomplete="off" (keyup.enter)="executeCopy()" />
+              <mat-hint>Keys will be written as dest-app/key-name</mat-hint>
+            </mat-form-field>
+          </div>
+
+          <!-- Recent apps as quick-pick destination chips -->
+          @if (appState.recentApps().length) {
+            <div class="dest-recents">
+              <span class="dest-recents-label">Pick recent:</span>
+              @for (r of appState.recentApps(); track r) {
+                @if (r !== copySourceApp()) {
+                  <button class="chip chip-sm" type="button" (click)="copyDestApp.set(r)">
+                    <mat-icon class="chip-icon">storage</mat-icon>{{ r }}
+                  </button>
+                }
+              }
+            </div>
+          }
+
+          <div class="copy-actions">
+            <button mat-flat-button class="btn-primary" type="button"
+              (click)="executeCopy()" [disabled]="copying() || loadingSource() || !copyDestApp().trim()">
+              <mat-icon>content_copy</mat-icon>
+              Copy {{ copyKeyCount() }} Key(s) →
+            </button>
+            <button mat-stroked-button class="btn-secondary" type="button" (click)="closeCopyPanel()">
+              Cancel
+            </button>
+          </div>
+        </div>
+      }
+    </mat-card>
+  }
 
   <p class="footer">etcd UI Dashboard · etcd v3 JSON Gateway</p>
 </div>
