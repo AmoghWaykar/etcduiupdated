@@ -1,0 +1,392 @@
+<div class="workbench">
+
+  <!-- TOP NAVBAR -->
+  <header class="navbar">
+    <div class="navbar-brand">
+      <div class="brand-logo">
+        <mat-icon>hub</mat-icon>
+      </div>
+      <span class="brand-name">etcd Workbench</span>
+      <span class="brand-sep">/</span>
+      <span class="brand-app">{{ appName() }}</span>
+    </div>
+    <div class="navbar-actions">
+      <button mat-stroked-button class="nav-btn" type="button" (click)="reload()" [disabled]="loading()" matTooltip="Reload keys from etcd">
+        <mat-icon>refresh</mat-icon>
+        Refresh
+      </button>
+      <button mat-stroked-button class="nav-btn" type="button" routerLink="/" matTooltip="Change application namespace">
+        <mat-icon>swap_horiz</mat-icon>
+        Switch App
+      </button>
+    </div>
+  </header>
+
+  @if (loading()) {
+    <mat-progress-bar mode="indeterminate" class="progress" />
+  }
+
+  <div class="layout">
+
+    <!-- SIDEBAR -->
+    <aside class="sidebar">
+      <div class="sidebar-section">
+        <div class="section-header">
+          <span class="section-title">
+            <mat-icon class="section-icon">account_tree</mat-icon>
+            Keys
+          </span>
+          <span class="count-badge">{{ flatKeys().length }}</span>
+        </div>
+
+        <mat-form-field appearance="outline" class="search-field" subscriptSizing="dynamic">
+          <mat-icon matPrefix>search</mat-icon>
+          <input
+            matInput
+            [ngModel]="search()"
+            (ngModelChange)="search.set($event)"
+            placeholder="Filter keys…"
+            autocomplete="off"
+          />
+          @if (search()) {
+            <button matSuffix mat-icon-button type="button" (click)="search.set('')" class="clear-btn">
+              <mat-icon>close</mat-icon>
+            </button>
+          }
+        </mat-form-field>
+
+        <div class="tree-container">
+          @if (!displayTree().children.length) {
+            <div class="empty-state">
+              <mat-icon>search_off</mat-icon>
+              <span>No keys match</span>
+            </div>
+          } @else {
+            <app-key-tree
+              [node]="displayTree()"
+              [selectedPath]="selectedPath()"
+              (pick)="onPick($event)"
+              (clonePath)="openCloneDialog($event)"
+            />
+          }
+        </div>
+      </div>
+
+      <!-- BULK SECTION -->
+      <div class="sidebar-section bulk-section">
+        <div class="section-header">
+          <span class="section-title">
+            <mat-icon class="section-icon">sync_alt</mat-icon>
+            Bulk Import / Export
+          </span>
+        </div>
+
+        <mat-tab-group animationDuration="0" mat-stretch-tabs="false" class="bulk-tabs">
+          <mat-tab>
+            <ng-template mat-tab-label>
+              <mat-icon class="tab-icon">upload_file</mat-icon>
+              Import
+            </ng-template>
+            <div class="tab-content">
+              <input #jsonFile type="file" accept="application/json,.json" hidden (change)="onJsonFile($event)" />
+              <button mat-stroked-button class="action-btn" type="button"
+                (click)="triggerImport(jsonFile)" [disabled]="importing() || loading()">
+                <mat-icon>upload_file</mat-icon>
+                Import JSON
+              </button>
+              <p class="hint-text">
+                Flat JSON object, e.g. <code>&#123;"key": "value"&#125;</code>.
+                Keys stored as <code>{{ appName() }}/key</code>.
+              </p>
+            </div>
+          </mat-tab>
+
+          <mat-tab>
+            <ng-template mat-tab-label>
+              <mat-icon class="tab-icon">download</mat-icon>
+              Export
+            </ng-template>
+            <div class="tab-content">
+              <button mat-stroked-button class="action-btn" type="button"
+                (click)="exportJson()" [disabled]="loading() || !flatKeys().length">
+                <mat-icon>download</mat-icon>
+                Export JSON
+              </button>
+              <p class="hint-text">
+                Exports <strong>{{ nonSecureKeyCount() }}</strong> non-secure key(s) for <code>{{ appName() }}</code>. Secure keys are never exported.
+              </p>
+            </div>
+          </mat-tab>
+        </mat-tab-group>
+      </div>
+    </aside>
+
+    <!-- MAIN CONTENT -->
+    <main class="content">
+
+      <!-- KEY EDITOR PANEL -->
+      <div class="panel editor-panel">
+        <div class="panel-header">
+          <div class="panel-title-row">
+            <mat-icon class="panel-icon">edit_note</mat-icon>
+            <h2 class="panel-title">Key Editor</h2>
+          </div>
+        </div>
+
+        @if (selectedPath(); as path) {
+          <div class="key-meta">
+            <div class="meta-row">
+              <div class="meta-item">
+                <span class="meta-label">Relative Path</span>
+                <div class="meta-value-row">
+                  <code class="meta-code path-code">
+                    <mat-icon class="code-icon">key</mat-icon>
+                    {{ path }}
+                  </code>
+                  @if (selectedEntry()?.isSecure) {
+                    <span class="badge badge-secure">
+                      <mat-icon>lock</mat-icon>
+                      Secure
+                    </span>
+                  }
+                </div>
+              </div>
+
+              @if (selectedEntry(); as entry) {
+                <div class="meta-item">
+                  <span class="meta-label">Version</span>
+                  <code class="meta-code">v{{ entry.version }}</code>
+                </div>
+              }
+            </div>
+
+            <!-- VERSION HISTORY -->
+            @if (selectedEntry(); as entry) {
+              <div class="version-section">
+                <div class="version-header">
+                  <mat-icon class="version-icon">history</mat-icon>
+                  <span class="version-title">Version History</span>
+                  <span class="version-hint">Showing last {{ getVersionBadges(entry).length }} version(s)</span>
+                </div>
+                <div class="version-badges">
+                  @for (v of getVersionBadges(entry); track v.label) {
+                    <button
+                      class="version-badge"
+                      [class.version-badge-current]="v.isCurrent"
+                      [class.version-badge-selected]="selectedVersionLabel() === v.label"
+                      type="button"
+                      (click)="selectVersionBadge(v)"
+                      [matTooltip]="'Revision ' + v.revision + (v.isCurrent ? ' (current)' : '')"
+                    >
+                      <mat-icon class="vbadge-icon">{{ v.isCurrent ? 'radio_button_checked' : 'radio_button_unchecked' }}</mat-icon>
+                      {{ v.label }}
+                    </button>
+                  }
+                  <button
+                    class="version-badge version-badge-custom"
+                    [class.version-badge-selected]="selectedVersionLabel() === 'Custom Revision'"
+                    type="button"
+                    (click)="selectedVersionLabel.set('Custom Revision')"
+                    matTooltip="Enter a custom revision number"
+                  >
+                    <mat-icon class="vbadge-icon">edit</mat-icon>
+                    Custom
+                  </button>
+                </div>
+
+                @if (selectedVersionLabel() === 'Custom Revision') {
+                  <div class="custom-revision-row">
+                    <mat-form-field appearance="outline" class="custom-rev-field" subscriptSizing="dynamic">
+                      <mat-label>Custom Revision</mat-label>
+                      <mat-icon matPrefix>tag</mat-icon>
+                      <input matInput [ngModel]="customRevision()" (ngModelChange)="customRevision.set($event)"
+                        placeholder="Enter revision number" autocomplete="off" type="number" />
+                    </mat-form-field>
+                    <button mat-flat-button class="fetch-btn" type="button"
+                      (click)="fetchAtRevision()" [disabled]="loading()">
+                      <mat-icon>download</mat-icon>
+                      Fetch
+                    </button>
+                  </div>
+                }
+              </div>
+            }
+          </div>
+
+          <!-- EDITOR -->
+          <div class="editor-container">
+            <div class="editor-toolbar">
+              <span class="editor-label">
+                <mat-icon>code</mat-icon>
+                Value
+              </span>
+              @if (selectedEntry()?.isSecure) {
+                <span class="secure-editor-badge">
+                  <mat-icon>lock</mat-icon>
+                  Secure — enter new value to update
+                </span>
+              }
+              @if (isDirty()) {
+                <span class="dirty-badge">
+                  <mat-icon>fiber_manual_record</mat-icon>
+                  Unsaved changes
+                </span>
+              }
+            </div>
+            @if (selectedEntry()?.isSecure && !isDirty()) {
+              <div class="secure-placeholder-box">
+                <mat-icon class="secure-placeholder-icon">lock</mat-icon>
+                <span class="secure-placeholder-text">••••••••••••</span>
+                <span class="secure-placeholder-hint">Type below to replace the secure value</span>
+              </div>
+            }
+            <mat-form-field appearance="outline" class="editor-field">
+              <textarea
+                matInput
+                rows="14"
+                [(ngModel)]="editorValue"
+                [disabled]="saving()"
+                [placeholder]="(selectedEntry()?.isSecure ?? false) ? 'Enter new secure value…' : ''"
+                class="editor-textarea"
+                spellcheck="false"
+              ></textarea>
+            </mat-form-field>
+          </div>
+
+          <div class="editor-actions">
+            <button mat-flat-button class="btn-save" type="button"
+              (click)="saveSelected()" [disabled]="saving() || !isDirty()">
+              <mat-icon>save</mat-icon>
+              Save
+            </button>
+            <button mat-stroked-button class="btn-restore" type="button"
+              (click)="restoreVersion()" [disabled]="saving() || (selectedEntry()?.isSecure ?? false)"
+              matTooltip="Restore this version as current">
+              <mat-icon>restore</mat-icon>
+              Restore Version
+            </button>
+            <div class="action-spacer"></div>
+            <button mat-stroked-button class="btn-delete" type="button"
+              (click)="deleteSelected()" [disabled]="saving()">
+              <mat-icon>delete_outline</mat-icon>
+              Delete
+            </button>
+          </div>
+
+        } @else {
+          <div class="empty-editor">
+            <mat-icon class="empty-icon">edit_note</mat-icon>
+            <p class="empty-title">No key selected</p>
+            <p class="empty-sub">Select a key from the tree, or create a new one below</p>
+          </div>
+        }
+      </div>
+
+      <!-- ADD KEY PANEL -->
+      <div class="panel add-panel">
+        <div class="panel-header">
+          <div class="panel-title-row">
+            <mat-icon class="panel-icon">add_circle_outline</mat-icon>
+            <h2 class="panel-title">Create New Key</h2>
+          </div>
+        </div>
+
+        <div class="add-form">
+          <div class="form-row">
+            <mat-form-field appearance="outline" class="type-field">
+              <mat-label>Type</mat-label>
+              <mat-icon matPrefix>{{ isSecureCreate ? 'lock' : 'lock_open' }}</mat-icon>
+              <mat-select [(ngModel)]="isSecureCreate">
+                <mat-option [value]="false">
+                  <div class="option-row">
+                    <mat-icon class="option-icon">lock_open</mat-icon>
+                    Non-Secure
+                  </div>
+                </mat-option>
+                <mat-option [value]="true">
+                  <div class="option-row">
+                    <mat-icon class="option-icon">lock</mat-icon>
+                    Secure
+                  </div>
+                </mat-option>
+              </mat-select>
+            </mat-form-field>
+
+            <mat-form-field appearance="outline" class="path-field">
+              <mat-label>Relative path</mat-label>
+              <mat-icon matPrefix>key</mat-icon>
+              <input matInput [(ngModel)]="newRelativePath" placeholder="e.g. db/host or key-version" autocomplete="off" />
+              <mat-hint>{{ appName() }}/<strong>{{ newRelativePath || 'key-name' }}</strong></mat-hint>
+            </mat-form-field>
+          </div>
+
+          <mat-form-field appearance="outline" class="value-field">
+            <mat-label>Value</mat-label>
+            <textarea matInput rows="4" [(ngModel)]="newValue" spellcheck="false" class="editor-textarea"></textarea>
+          </mat-form-field>
+
+          <div class="add-actions">
+            <button mat-flat-button class="btn-create" type="button"
+              (click)="createKey()" [disabled]="saving()">
+              <mat-icon>add</mat-icon>
+              Create Key
+            </button>
+          </div>
+        </div>
+      </div>
+
+    </main>
+  </div>
+
+  <!-- CLONE PATH DIALOG -->
+  @if (cloneDialogOpen()) {
+    <div class="clone-dialog-overlay" (click)="closeCloneDialog()">
+      <div class="clone-dialog" (click)="$event.stopPropagation()">
+        <div class="clone-dialog-header">
+          <mat-icon class="clone-dialog-icon">content_copy</mat-icon>
+          <h3 class="clone-dialog-title">Clone Path</h3>
+          <button mat-icon-button type="button" class="clone-dialog-close" (click)="closeCloneDialog()">
+            <mat-icon>close</mat-icon>
+          </button>
+        </div>
+
+        <div class="clone-dialog-body">
+          <div class="clone-source-info">
+            <span class="clone-label">Source path</span>
+            <code class="clone-source-path">
+              <mat-icon class="clone-path-icon">{{ cloneIsSecureFolder() ? 'lock' : 'folder' }}</mat-icon>
+              {{ cloneSourcePath() }}
+            </code>
+            @if (cloneIsSecureFolder()) {
+              <div class="clone-secure-notice">
+                <mat-icon>info</mat-icon>
+                <span>Secure folder — only key names will be copied, not values.</span>
+              </div>
+            }
+          </div>
+
+          <mat-form-field appearance="outline" class="clone-dest-field">
+            <mat-label>Destination path</mat-label>
+            <mat-icon matPrefix>drive_file_rename_outline</mat-icon>
+            <input
+              matInput
+              [(ngModel)]="cloneTargetPath"
+              placeholder="e.g. secure/backup or config/new"
+              autocomplete="off"
+            />
+            <mat-hint>All keys under <strong>{{ cloneSourcePath() }}</strong> will be cloned here</mat-hint>
+          </mat-form-field>
+        </div>
+
+        <div class="clone-dialog-actions">
+          <button mat-stroked-button type="button" (click)="closeCloneDialog()">Cancel</button>
+          <button mat-flat-button class="btn-clone-confirm" type="button"
+            (click)="executeClone()" [disabled]="saving() || !cloneTargetPath.trim()">
+            <mat-icon>content_copy</mat-icon>
+            Clone
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+</div>

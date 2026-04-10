@@ -1,0 +1,47 @@
+<ul class="nodes" role="tree">
+  @for (n of node.children; track trackKey(n)) {
+    <li class="node" role="treeitem">
+      <button
+        type="button"
+        class="node-btn"
+        [class.is-leaf]="!!n.fullRelativePath"
+        [class.is-folder]="!n.fullRelativePath"
+        [class.is-active]="!!n.fullRelativePath && selectedPath === n.fullRelativePath"
+        [class.is-secure]="n.entry?.isSecure"
+        (click)="onNodeClick(n, $event)"
+        [disabled]="!n.fullRelativePath"
+        [matTooltip]="n.fullRelativePath ?? ''"
+        [matTooltipDisabled]="!n.fullRelativePath"
+      >
+        <mat-icon class="node-icon">{{ iconFor(n) }}</mat-icon>
+        <span class="node-name">{{ n.segment }}</span>
+        @if (n.fullRelativePath) {
+          @if (n.entry?.isSecure) {
+            <mat-icon class="secure-icon">lock</mat-icon>
+          }
+          @if (n.entry?.version && n.entry?.version !== '1') {
+            <span class="version-chip">v{{ n.entry?.version }}</span>
+          }
+          <span class="node-preview" [matTooltip]="n.entry?.isSecure ? 'Secure — value hidden' : (n.value ?? '')" [matTooltipDisabled]="!(n.value ?? '').length && !n.entry?.isSecure">
+            {{ leafValuePreview(n.value, n.entry?.isSecure) }}
+          </span>
+        } @else {
+          <span class="child-count">{{ n.children.length }}</span>
+          <button
+            type="button"
+            class="clone-folder-btn"
+            (click)="onCloneFolder(n, $event)"
+            matTooltip="Clone this folder to another path"
+          >
+            <mat-icon>content_copy</mat-icon>
+          </button>
+        }
+      </button>
+      @if (n.children.length) {
+        <div class="subtree">
+          <app-key-tree [node]="n" [selectedPath]="selectedPath" (pick)="pick.emit($event)" (clonePath)="clonePath.emit($event)" />
+        </div>
+      }
+    </li>
+  }
+</ul>

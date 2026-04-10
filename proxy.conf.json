@@ -1,0 +1,10 @@
+{
+  "/etcd": {
+    "target": "http://localhost:2379",
+    "secure": false,
+    "changeOrigin": true,
+    "pathRewrite": {
+      "^/etcd": ""
+    }
+  }
+}

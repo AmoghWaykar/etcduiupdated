@@ -1,0 +1,148 @@
+html,
+body {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  font-family: Roboto, 'Helvetica Neue', sans-serif;
+  background: var(--app-bg);
+  color: var(--app-fg);
+}
+
+:root {
+  --app-bg: #0d1117;
+  --app-fg: #c9d1d9;
+  --app-muted: #6e7681;
+  --app-border: #21262d;
+  --app-accent: #1f6feb;
+  --app-accent-hover: #388bfd;
+  --app-surface: #161b22;
+  --app-surface-elevated: #1c2128;
+  --app-surface-hover: #222831;
+  --app-green: #3fb950;
+  --app-orange: #f0883e;
+  --app-red: #f85149;
+  --app-yellow: #e3b341;
+  --app-sidebar-width: 280px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+/* ─── Scrollbar ─────────────────────────────── */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--app-border); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--app-muted); }
+
+/* ─── Angular Material MDC — dark theme fixes ─ */
+
+/* Input / textarea text — the #1 invisible-text culprit */
+.mat-mdc-input-element,
+.mat-mdc-form-field input,
+.mat-mdc-form-field textarea {
+  color: var(--app-fg) !important;
+  caret-color: var(--app-accent-hover) !important;
+}
+
+/* Select trigger */
+.mat-mdc-select-value-text { color: var(--app-fg) !important; }
+.mat-mdc-select-placeholder { color: var(--app-muted) !important; }
+
+/* Form field backgrounds */
+.mat-mdc-text-field-wrapper {
+  background-color: #0d1117 !important;
+}
+
+/* Outlined border colours */
+.mdc-text-field--outlined:not(.mdc-text-field--disabled) .mdc-notched-outline__leading,
+.mdc-text-field--outlined:not(.mdc-text-field--disabled) .mdc-notched-outline__notch,
+.mdc-text-field--outlined:not(.mdc-text-field--disabled) .mdc-notched-outline__trailing {
+  border-color: var(--app-border) !important;
+}
+.mdc-text-field--outlined:not(.mdc-text-field--disabled):hover .mdc-notched-outline__leading,
+.mdc-text-field--outlined:not(.mdc-text-field--disabled):hover .mdc-notched-outline__notch,
+.mdc-text-field--outlined:not(.mdc-text-field--disabled):hover .mdc-notched-outline__trailing {
+  border-color: color-mix(in srgb, var(--app-accent) 50%, var(--app-border)) !important;
+}
+.mdc-text-field--focused .mdc-notched-outline__leading,
+.mdc-text-field--focused .mdc-notched-outline__notch,
+.mdc-text-field--focused .mdc-notched-outline__trailing {
+  border-color: var(--app-accent) !important;
+}
+
+/* Float label */
+.mat-mdc-form-field .mat-mdc-floating-label,
+.mat-mdc-form-field label {
+  color: var(--app-muted) !important;
+}
+.mat-mdc-form-field.mat-focused .mat-mdc-floating-label,
+.mat-mdc-form-field.mat-focused label {
+  color: var(--app-accent-hover) !important;
+}
+
+/* Hint */
+.mat-mdc-form-field-hint { color: var(--app-muted) !important; }
+
+/* Icons inside form fields */
+.mat-mdc-form-field .mat-icon { color: var(--app-muted) !important; }
+.mat-mdc-form-field.mat-focused .mat-icon { color: var(--app-accent-hover) !important; }
+
+/* Select dropdown panel */
+.mat-mdc-select-panel {
+  background: var(--app-surface-elevated) !important;
+  border: 1px solid var(--app-border) !important;
+  border-radius: 8px !important;
+}
+.mat-mdc-option { color: var(--app-fg) !important; }
+.mat-mdc-option:hover:not(.mdc-list-item--disabled) {
+  background: color-mix(in srgb, var(--app-accent) 10%, var(--app-surface-elevated)) !important;
+}
+.mat-mdc-option.mdc-list-item--selected:not(.mdc-list-item--disabled) {
+  background: color-mix(in srgb, var(--app-accent) 16%, var(--app-surface-elevated)) !important;
+  color: var(--app-accent-hover) !important;
+}
+
+/* Tabs */
+.mat-mdc-tab .mdc-tab__text-label { color: var(--app-muted) !important; }
+.mat-mdc-tab.mdc-tab--active .mdc-tab__text-label { color: var(--app-accent-hover) !important; }
+.mat-mdc-tab-header { border-bottom: 1px solid var(--app-border) !important; }
+
+/* Snackbar */
+.mat-mdc-snack-bar-container {
+  --mdc-snackbar-container-color: var(--app-surface-elevated);
+  --mdc-snackbar-supporting-text-color: var(--app-fg);
+  border: 1px solid var(--app-border) !important;
+  border-radius: 8px !important;
+}
+
+/* Dialog */
+.mat-mdc-dialog-container .mdc-dialog__surface {
+  background: var(--app-surface) !important;
+  border: 1px solid var(--app-border) !important;
+  border-radius: 10px !important;
+}
+
+/* Chips */
+.mat-mdc-chip {
+  background: var(--app-surface-elevated) !important;
+  border: 1px solid var(--app-border) !important;
+  color: var(--app-fg) !important;
+}
+
+/* Progress bar */
+mat-progress-bar {
+  --mdc-linear-progress-active-indicator-color: var(--app-accent);
+  --mdc-linear-progress-track-color: var(--app-border);
+}
+
+/* Tooltip */
+.mat-mdc-tooltip {
+  --mdc-plain-tooltip-container-color: var(--app-surface-elevated);
+  --mdc-plain-tooltip-supporting-text-color: var(--app-fg);
+  border: 1px solid var(--app-border);
+  border-radius: 6px !important;
+  font-size: 0.75rem !important;
+}

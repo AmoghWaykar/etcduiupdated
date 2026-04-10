@@ -1,0 +1,59 @@
+<div class="page">
+  <div class="hero">
+    <div class="hero-icon">
+      <mat-icon>hub</mat-icon>
+    </div>
+    <h1 class="hero-title">etcd Workbench</h1>
+    <p class="hero-sub">A powerful UI client for etcd v3</p>
+  </div>
+
+  <mat-card class="card" appearance="outlined">
+    <div class="card-header">
+      <mat-icon class="card-icon">storage</mat-icon>
+      <div>
+        <h2 class="card-title">Select Namespace</h2>
+        <p class="card-desc">Keys are stored as <code>app-name/key-name</code></p>
+      </div>
+    </div>
+
+    <mat-form-field appearance="outline" class="field">
+      <mat-label>Application namespace</mat-label>
+      <mat-icon matPrefix>label</mat-icon>
+      <input matInput [(ngModel)]="draft" name="app" placeholder="e.g. client-manager" autocomplete="off"
+        (keyup.enter)="continue()" />
+      <mat-hint>Letters, numbers, hyphens, dots, underscores</mat-hint>
+    </mat-form-field>
+
+    <div class="actions">
+      <button mat-flat-button class="btn-primary" type="button" (click)="continue()">
+        <mat-icon>launch</mat-icon>
+        Open Explorer
+      </button>
+      @if (appState.hasApp()) {
+        <a mat-stroked-button class="btn-secondary" routerLink="/explorer">
+          <mat-icon>arrow_forward</mat-icon>
+          Continue to Explorer
+        </a>
+      }
+    </div>
+
+    @if (appState.recentApps().length) {
+      <div class="recents">
+        <span class="recents-label">
+          <mat-icon class="recents-icon">history</mat-icon>
+          Recent
+        </span>
+        <div class="chips">
+          @for (r of appState.recentApps(); track r) {
+            <button class="chip" type="button" (click)="pickRecent(r)">
+              <mat-icon class="chip-icon">storage</mat-icon>
+              {{ r }}
+            </button>
+          }
+        </div>
+      </div>
+    }
+  </mat-card>
+
+  <p class="footer">etcd UI Dashboard · etcd v3 JSON Gateway</p>
+</div>
