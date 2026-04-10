@@ -95,6 +95,12 @@ export class DashboardComponent implements OnInit {
    */
   selectedVersionLabel = signal<string>('');
 
+  /**
+   * True when the user is viewing a historical (non-current) version in the editor.
+   * Controls visibility of the "Restore Version" button.
+   */
+  isViewingHistory = signal<boolean>(false);
+
   /** The raw etcd revision number for the currently selected version badge (used for API) */
   private selectedVersionRevision = signal<string>('');
 
@@ -123,9 +129,8 @@ export class DashboardComponent implements OnInit {
    * `create_revision` = global cluster revision when v1 was written.
    * `mod_revision`    = global cluster revision when vN (current) was written.
    *
-   * We cannot recover exact intermediate revisions without a full history scan,
-   * so we linearly interpolate between createRevision and modRevision for v2…v(N-1).
-   * We cap display at 5 badges (the 5 most recent) to keep the UI clean.
+   * We show ALL versions (no gaps, no missing badges) so the user can always navigate
+   * to any historical version. Intermediate revisions are linearly interpolated.
    */
   getVersionBadges(entry: AppKeyEntry): VersionBadge[] {
     const currentVersion = parseInt(entry.version || '1', 10);
@@ -141,32 +146,23 @@ export class DashboardComponent implements OnInit {
       }];
     }
 
-    // Show up to last 5 versions
-    const maxShow = Math.min(currentVersion, 5);
-    const startVersion = currentVersion - maxShow + 1;
+    const makeRevision = (v: number): string => {
+      if (v === 1) return entry.createRevision || entry.modRevision;
+      if (v === currentVersion) return entry.modRevision;
+      // Linear interpolation between createRev (v1) and modRev (vN)
+      const fraction = (v - 1) / Math.max(currentVersion - 1, 1);
+      return String(Math.round(createRev + fraction * (modRev - createRev)));
+    };
+
+    // Show EVERY version — v1 through vN, no gaps
     const badges: VersionBadge[] = [];
-
-    for (let v = startVersion; v <= currentVersion; v++) {
-      let revisionForVersion: string;
-
-      if (v === 1) {
-        revisionForVersion = entry.createRevision || entry.modRevision;
-      } else if (v === currentVersion) {
-        revisionForVersion = entry.modRevision;
-      } else {
-        // Linear interpolation between createRev (v1) and modRev (vN)
-        const fraction = (v - 1) / Math.max(currentVersion - 1, 1);
-        const estRev = Math.round(createRev + fraction * (modRev - createRev));
-        revisionForVersion = String(estRev);
-      }
-
+    for (let v = 1; v <= currentVersion; v++) {
       badges.push({
-        label: `v${v}`,          // ← Always shown as "v1", "v2", etc.
-        revision: revisionForVersion,
+        label: `v${v}`,
+        revision: makeRevision(v),
         isCurrent: v === currentVersion,
       });
     }
-
     return badges;
   }
 
@@ -176,20 +172,22 @@ export class DashboardComponent implements OnInit {
     this.selectedVersionRevision.set(badge.revision);
 
     if (badge.isCurrent) {
-      // Just restore the live value — no API call needed
+      // Viewing the live/current version — no API call needed, hide Restore button
+      this.isViewingHistory.set(false);
       const entry = this.selectedEntry();
       if (entry) {
-        // For secure keys, don't expose the raw value — keep editor blank
         this.editorValue = entry.isSecure ? '' : entry.value;
         this.baselineValue = entry.isSecure ? '' : entry.value;
         this.snack.open(`Viewing current version (${badge.label})`, 'OK', { duration: 2000 });
       }
     } else {
+      // Viewing a historical version — fetch it and show Restore button
+      this.isViewingHistory.set(true);
       this.fetchAtRevision();
     }
   }
 
-  /** Fetch the value at a specific etcd revision */
+  /** Fetch the value at a specific etcd revision and load it into the editor */
   fetchAtRevision(): void {
     const app = this.appName();
     const rel = this.selectedPath();
@@ -211,8 +209,11 @@ export class DashboardComponent implements OnInit {
           if (kv) {
             const decoded = this.etcd.decodeKv(kv);
             const isSecure = this.selectedEntry()?.isSecure ?? false;
-            // For secure keys, don't expose historical values in the editor
+            // Load historical value into editor; baselineValue stays as current so isDirty() works
             this.editorValue = isSecure ? '' : decoded.value;
+            // Show Restore button whenever we're on a historical version
+            this.isViewingHistory.set(this.selectedVersionLabel() !== 'Custom Revision' &&
+              !this.getVersionBadges(this.selectedEntry()!).find(b => b.label === this.selectedVersionLabel())?.isCurrent);
             this.snack.open(
               isSecure
                 ? `Historical revision ${rev} loaded — secure value not shown`
@@ -295,6 +296,7 @@ export class DashboardComponent implements OnInit {
     this.selectedVersionLabel.set('');
     this.selectedVersionRevision.set('');
     this.customRevision.set('');
+    this.isViewingHistory.set(false);
     this.editorValue = '';
     this.baselineValue = '';
   }
@@ -339,19 +341,32 @@ export class DashboardComponent implements OnInit {
       });
   }
 
-  restoreVersion(): void {
+  async restoreVersion(): Promise<void> {
     const app = this.appName();
     const rel = this.selectedPath();
     if (!app || !rel) return;
+
+    const versionLabel = this.selectedVersionLabel();
+    const ok = await this.confirm(
+      'Restore version?',
+      `Restore ${versionLabel} of "${rel}" as the new current value? This will create a new version.`,
+      'Restore',
+      'primary',
+    );
+    if (!ok) return;
+
     const full = buildFullKey(app, rel);
+    const isSecure = this.selectedEntry()?.isSecure ?? false;
+    const valueToWrite = isSecure ? utf8ToBase64(this.editorValue) : this.editorValue;
     this.saving.set(true);
     this.etcd
-      .putKey(full, this.editorValue)
+      .putKey(full, valueToWrite)
       .pipe(finalize(() => this.saving.set(false)))
       .subscribe({
         next: () => {
           this.baselineValue = this.editorValue;
-          this.snack.open('Version restored as current.', 'OK', { duration: 3000 });
+          this.isViewingHistory.set(false);
+          this.snack.open(`${versionLabel} restored as the new current version.`, 'OK', { duration: 3000 });
           this.reload();
         },
         error: (e: Error) => this.snack.open(e.message, 'Dismiss', { duration: 8000 }),

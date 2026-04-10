@@ -30,24 +30,29 @@ export class KeyTreeComponent {
     this.clonePath.emit({ sourcePath, isSecureFolder });
   }
 
-  /** Derive the relative path prefix for a folder node from its first leaf descendant. */
+  /** Derive the relative path prefix for a folder node at any depth.
+   *
+   * Walk to the first leaf descendant and use its `fullRelativePath` to reconstruct
+   * this folder's path. We count the nesting depth from this node to the leaf so we
+   * can strip exactly the right number of trailing segments — this is correct whether
+   * the folder is a direct root child (e.g. "mahajan") or a deeper node (e.g. "mahajan/shubham").
+   */
   private folderPath(n: KeyTreeNode): string {
     if (n.fullRelativePath) return n.fullRelativePath;
-    // Walk to first leaf to get the prefix
+
+    let depth = 0;
     let cur: KeyTreeNode = n;
-    const segments: string[] = [n.segment];
     while (cur.children.length > 0) {
       cur = cur.children[0];
+      depth++;
       if (cur.fullRelativePath) {
-        // fullRelativePath is the full relative path of the leaf;
-        // strip the leaf segment to get the folder prefix
+        // cur.fullRelativePath has `depth` extra segments compared to this folder's path.
         const parts = cur.fullRelativePath.split('/');
-        parts.pop();
-        return parts.join('/');
+        return parts.slice(0, parts.length - depth).join('/');
       }
-      segments.push(cur.segment);
     }
-    return segments.join('/');
+    // Fallback (no leaf found — should never happen in a well-formed tree)
+    return n.segment;
   }
 
   leafValuePreview(v: string | undefined, isSecure?: boolean): string {

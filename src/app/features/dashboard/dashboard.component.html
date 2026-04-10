@@ -259,12 +259,14 @@
               <mat-icon>save</mat-icon>
               Save
             </button>
-            <button mat-stroked-button class="btn-restore" type="button"
-              (click)="restoreVersion()" [disabled]="saving() || (selectedEntry()?.isSecure ?? false)"
-              matTooltip="Restore this version as current">
-              <mat-icon>restore</mat-icon>
-              Restore Version
-            </button>
+            @if (isViewingHistory()) {
+              <button mat-stroked-button class="btn-restore" type="button"
+                (click)="restoreVersion()" [disabled]="saving() || (selectedEntry()?.isSecure ?? false)"
+                [matTooltip]="'Restore ' + selectedVersionLabel() + ' as the new current value'">
+                <mat-icon>restore</mat-icon>
+                Restore {{ selectedVersionLabel() }}
+              </button>
+            }
             <div class="action-spacer"></div>
             <button mat-stroked-button class="btn-delete" type="button"
               (click)="deleteSelected()" [disabled]="saving()">
